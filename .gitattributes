@@ -3,4 +3,9 @@
 *.gradle    text eol=lf
 *.mk        text eol=lf
 *.sh        text eol=lf
+*.apk filter=lfs diff=lfs merge=lfs -text
+*.aab filter=lfs diff=lfs merge=lfs -text
+*.zip filter=lfs diff=lfs merge=lfs -text
+*.tar.gz filter=lfs diff=lfs merge=lfs -text
+*workerd filter=lfs diff=lfs merge=lfs -text
 node_modules/@cloudflare/workerd-linux-arm64/bin/workerd filter=lfs diff=lfs merge=lfs -text
