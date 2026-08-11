@@ -33,5 +33,11 @@
   },
   "engines": {
     "java": ">=21.0.11"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.5.0",
+    "@capacitor/cli": "^8.5.0",
+    "@capacitor/core": "^8.5.0",
+    "wrangler": "^4.120.1"
   }
 }

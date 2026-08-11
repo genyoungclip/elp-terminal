@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">ELP Terminal</string>
+    <string name="title_activity_main">ELP Terminal</string>
+    <string name="package_name">net.elparadisogonzalo.elp</string>
+    <string name="custom_url_scheme">net.elparadisogonzalo.elp</string>
+</resources>
