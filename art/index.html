@@ -1,0 +1,683 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#050807">
+  <meta name="color-scheme" content="dark">
+  <meta name="description" content="ELP Terminal — a fast, secure developer terminal interface.">
+  <meta name="application-name" content="ELP Terminal">
+
+  <link rel="icon" href="/favicon.png">
+  <link rel="apple-touch-icon" href="/icon-192.png">
+
+  <title>ELP Terminal</title>
+
+  <style>
+    :root {
+      --bg: #050807;
+      --panel: rgba(10, 18, 15, .82);
+      --panel-2: rgba(15, 25, 21, .92);
+      --line: rgba(71, 255, 157, .16);
+      --line-strong: rgba(71, 255, 157, .34);
+      --text: #ecfff4;
+      --muted: #759286;
+      --green: #47ff9d;
+      --green-2: #00d977;
+      --cyan: #48e9ff;
+      --danger: #ff5577;
+      --shadow: 0 24px 80px rgba(0,0,0,.45);
+      --radius: 18px;
+      font-family:
+        Inter, ui-sans-serif, system-ui, -apple-system,
+        BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      min-height: 100%;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    body {
+      overflow-x: hidden;
+    }
+
+    button,
+    input {
+      font: inherit;
+    }
+
+    button {
+      cursor: pointer;
+    }
+
+    .background {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      overflow: hidden;
+      z-index: 0;
+      background:
+        radial-gradient(circle at 20% 10%, rgba(71,255,157,.09), transparent 32%),
+        radial-gradient(circle at 85% 80%, rgba(72,233,255,.07), transparent 30%),
+        linear-gradient(rgba(71,255,157,.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(71,255,157,.025) 1px, transparent 1px);
+      background-size: auto, auto, 44px 44px, 44px 44px;
+    }
+
+    .orb {
+      position: absolute;
+      width: 360px;
+      height: 360px;
+      border-radius: 50%;
+      filter: blur(80px);
+      opacity: .15;
+      background: var(--green);
+    }
+
+    .orb.one {
+      top: -180px;
+      left: -100px;
+    }
+
+    .orb.two {
+      right: -180px;
+      bottom: -180px;
+      background: var(--cyan);
+    }
+
+    .app {
+      position: relative;
+      z-index: 1;
+      width: min(1180px, calc(100% - 28px));
+      margin: 0 auto;
+      padding: 24px 0 48px;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      margin-bottom: 24px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 13px;
+    }
+
+    .logo {
+      width: 46px;
+      height: 46px;
+      display: grid;
+      place-items: center;
+      border: 1px solid var(--line-strong);
+      border-radius: 13px;
+      background: rgba(71,255,157,.07);
+      box-shadow:
+        0 0 28px rgba(71,255,157,.12),
+        inset 0 0 20px rgba(71,255,157,.04);
+      color: var(--green);
+      font-weight: 900;
+      letter-spacing: -2px;
+    }
+
+    .brand h1 {
+      margin: 0;
+      font-size: 16px;
+      letter-spacing: .12em;
+    }
+
+    .brand span {
+      display: block;
+      margin-top: 3px;
+      color: var(--muted);
+      font: 11px ui-monospace, SFMono-Regular, Menlo, monospace;
+      letter-spacing: .08em;
+    }
+
+    .status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--muted);
+      font: 11px ui-monospace, monospace;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 14px var(--green);
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: 1.3fr .7fr;
+      gap: 18px;
+      margin-bottom: 18px;
+    }
+
+    .panel {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--panel);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(18px);
+    }
+
+    .hero-main {
+      min-height: 340px;
+      padding: clamp(28px, 6vw, 64px);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .hero-main::after {
+      content: "";
+      position: absolute;
+      width: 240px;
+      height: 240px;
+      right: -90px;
+      top: -90px;
+      border-radius: 50%;
+      border: 1px solid var(--line);
+      box-shadow:
+        0 0 0 28px rgba(71,255,157,.02),
+        0 0 0 56px rgba(71,255,157,.015);
+    }
+
+    .eyebrow {
+      margin-bottom: 16px;
+      color: var(--green);
+      font: 11px ui-monospace, SFMono-Regular, Menlo, monospace;
+      letter-spacing: .2em;
+      text-transform: uppercase;
+    }
+
+    .hero h2 {
+      max-width: 720px;
+      margin: 0;
+      font-size: clamp(38px, 7vw, 76px);
+      line-height: .95;
+      letter-spacing: -.055em;
+    }
+
+    .hero h2 strong {
+      color: var(--green);
+      font-weight: 800;
+    }
+
+    .hero p {
+      max-width: 650px;
+      margin: 22px 0 0;
+      color: var(--muted);
+      font-size: 15px;
+      line-height: 1.7;
+    }
+
+    .hero-side {
+      padding: 22px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .terminal-mini {
+      min-height: 180px;
+      padding: 18px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: #030504;
+      font: 12px/1.8 ui-monospace, SFMono-Regular, Menlo, monospace;
+      color: #a5c7b5;
+    }
+
+    .terminal-mini .prompt {
+      color: var(--green);
+    }
+
+    .cursor {
+      display: inline-block;
+      width: 7px;
+      height: 14px;
+      margin-left: 3px;
+      vertical-align: -2px;
+      background: var(--green);
+      animation: blink 1s steps(1) infinite;
+    }
+
+    @keyframes blink {
+      50% { opacity: 0; }
+    }
+
+    .launch {
+      width: 100%;
+      border: 1px solid rgba(71,255,157,.35);
+      border-radius: 12px;
+      padding: 13px 16px;
+      background: var(--green);
+      color: #031109;
+      font-weight: 800;
+      letter-spacing: .04em;
+      transition: transform .2s, box-shadow .2s;
+    }
+
+    .launch:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 35px rgba(71,255,157,.18);
+    }
+
+    .terminal {
+      overflow: hidden;
+      margin-top: 18px;
+    }
+
+    .terminal-bar {
+      min-height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 15px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(255,255,255,.015);
+    }
+
+    .terminal-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--muted);
+      font: 11px ui-monospace, monospace;
+    }
+
+    .lights {
+      display: flex;
+      gap: 6px;
+    }
+
+    .light {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #52615a;
+    }
+
+    .terminal-body {
+      min-height: 330px;
+      padding: 20px;
+      background:
+        linear-gradient(rgba(71,255,157,.015) 1px, transparent 1px);
+      background-size: 100% 24px;
+      font: 13px/1.8 ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+
+    .line {
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .prompt {
+      color: var(--green);
+    }
+
+    .muted {
+      color: var(--muted);
+    }
+
+    .command-row {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      margin-top: 8px;
+    }
+
+    #command {
+      flex: 1;
+      min-width: 0;
+      border: 0;
+      outline: 0;
+      background: transparent;
+      color: var(--text);
+      font: inherit;
+    }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-top: 18px;
+    }
+
+    .metric {
+      padding: 20px;
+    }
+
+    .metric-label {
+      color: var(--muted);
+      font: 10px ui-monospace, monospace;
+      letter-spacing: .15em;
+    }
+
+    .metric-value {
+      margin-top: 9px;
+      color: var(--green);
+      font: 700 22px ui-monospace, monospace;
+    }
+
+    footer {
+      display: flex;
+      justify-content: space-between;
+      gap: 20px;
+      margin-top: 20px;
+      color: var(--muted);
+      font: 10px ui-monospace, monospace;
+    }
+
+    @media (max-width: 800px) {
+      .hero {
+        grid-template-columns: 1fr;
+      }
+
+      .hero-side {
+        gap: 18px;
+      }
+
+      .metrics {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (max-width: 480px) {
+      .app {
+        width: min(100% - 18px, 1180px);
+        padding-top: 12px;
+      }
+
+      header {
+        margin-bottom: 12px;
+      }
+
+      .status {
+        display: none;
+      }
+
+      .hero-main {
+        min-height: 300px;
+        padding: 28px 22px;
+      }
+
+      .hero h2 {
+        font-size: 43px;
+      }
+
+      .metrics {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .metric {
+        padding: 16px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="background">
+    <div class="orb one"></div>
+    <div class="orb two"></div>
+  </div>
+
+  <main class="app">
+    <header>
+      <div class="brand">
+        <div class="logo">&gt;_</div>
+        <div>
+          <h1>ELP TERMINAL</h1>
+          <span>DEVELOPER COMMAND INTERFACE</span>
+        </div>
+      </div>
+
+      <div class="status">
+        <span class="dot"></span>
+        SYSTEM ONLINE
+      </div>
+    </header>
+
+    <section class="hero">
+      <div class="panel hero-main">
+        <div class="eyebrow">ELPARADISOGONZALO // TERMINAL</div>
+        <h2>
+          Build.<br>
+          Ship.<br>
+          <strong>Execute.</strong>
+        </h2>
+        <p>
+          A fast command interface for the ELP ecosystem,
+          designed for developers and built to move between
+          web, Android and cloud infrastructure.
+        </p>
+      </div>
+
+      <div class="panel hero-side">
+        <div class="terminal-mini">
+          <div><span class="prompt">$</span> elp status</div>
+          <div>core ............. <span class="prompt">ONLINE</span></div>
+          <div>runtime .......... <span class="prompt">READY</span></div>
+          <div>cloud ............ <span class="prompt">CONNECTED</span></div>
+          <div>terminal ......... <span class="prompt">ACTIVE</span></div>
+          <br>
+          <div><span class="prompt">$</span> _<span class="cursor"></span></div>
+        </div>
+
+        <button class="launch" id="launch">
+          OPEN TERMINAL
+        </button>
+      </div>
+    </section>
+
+    <section class="panel terminal" aria-label="ELP Terminal">
+      <div class="terminal-bar">
+        <div class="lights">
+          <span class="light"></span>
+          <span class="light"></span>
+          <span class="light"></span>
+        </div>
+
+        <div class="terminal-title">
+          ELP://LOCAL
+        </div>
+
+        <div class="terminal-title" id="clock">
+          --:--:--
+        </div>
+      </div>
+
+      <div class="terminal-body" id="output">
+        <div class="line">
+          <span class="prompt">ELP</span> Terminal initialized.
+        </div>
+
+        <div class="line muted">
+          Type "help" to see available commands.
+        </div>
+
+        <div class="command-row">
+          <span class="prompt">elp@terminal:~$</span>
+          <input
+            id="command"
+            type="text"
+            autocomplete="off"
+            autocapitalize="off"
+            spellcheck="false"
+            aria-label="Terminal command"
+            autofocus
+          >
+        </div>
+      </div>
+    </section>
+
+    <section class="metrics">
+      <div class="panel metric">
+        <div class="metric-label">RUNTIME</div>
+        <div class="metric-value" id="runtime">WEB</div>
+      </div>
+
+      <div class="panel metric">
+        <div class="metric-label">PLATFORM</div>
+        <div class="metric-value" id="platform">--</div>
+      </div>
+
+      <div class="panel metric">
+        <div class="metric-label">STATUS</div>
+        <div class="metric-value">READY</div>
+      </div>
+
+      <div class="panel metric">
+        <div class="metric-label">VERSION</div>
+        <div class="metric-value">1.0.0</div>
+      </div>
+    </section>
+
+    <footer>
+      <span>ELPARADISOGONZALO</span>
+      <span>ELP TERMINAL // 2026</span>
+    </footer>
+  </main>
+
+  <script>
+    (() => {
+      const output = document.getElementById("output");
+      const input = document.getElementById("command");
+      const launch = document.getElementById("launch");
+      const clock = document.getElementById("clock");
+      const platform = document.getElementById("platform");
+
+      platform.textContent =
+        navigator.userAgentData?.platform ||
+        navigator.platform ||
+        "WEB";
+
+      function addLine(text, className = "") {
+        const line = document.createElement("div");
+        line.className = `line ${className}`;
+        line.textContent = text;
+
+        const commandRow = output.querySelector(".command-row");
+        output.insertBefore(line, commandRow);
+      }
+
+      function prompt() {
+        const row = document.createElement("div");
+        row.className = "command-row";
+
+        row.innerHTML = `
+          <span class="prompt">elp@terminal:~$</span>
+          <input
+            type="text"
+            autocomplete="off"
+            autocapitalize="off"
+            spellcheck="false"
+            aria-label="Terminal command"
+          >
+        `;
+
+        output.appendChild(row);
+
+        const next = row.querySelector("input");
+        next.addEventListener("keydown", handleCommand);
+        next.focus();
+
+        output.scrollTop = output.scrollHeight;
+      }
+
+      function handleCommand(event) {
+        if (event.key !== "Enter") return;
+
+        const value = event.target.value.trim();
+
+        if (!value) {
+          prompt();
+          event.target.disabled = true;
+          return;
+        }
+
+        event.target.disabled = true;
+
+        addLine(`elp@terminal:~$ ${value}`, "prompt");
+
+        const [command] = value.split(/\s+/);
+
+        switch (command.toLowerCase()) {
+          case "help":
+            addLine("Available commands:");
+            addLine("  help       Show this help");
+            addLine("  clear      Clear terminal");
+            addLine("  status     Show system status");
+            addLine("  version    Show terminal version");
+            addLine("  date       Show current date");
+            break;
+
+          case "clear":
+            output.innerHTML = "";
+            prompt();
+            return;
+
+          case "status":
+            addLine("ELP Terminal ........ ONLINE");
+            addLine("Web runtime ......... READY");
+            addLine("Command bridge ...... STANDBY");
+            addLine("Cloud interface ..... READY");
+            break;
+
+          case "version":
+            addLine("ELP Terminal v1.0.0");
+            break;
+
+          case "date":
+            addLine(new Date().toString());
+            break;
+
+          default:
+            addLine(
+              `Command "${command}" is not available in the web sandbox.`,
+              "muted"
+            );
+        }
+
+        prompt();
+      }
+
+      input.addEventListener("keydown", handleCommand);
+
+      launch.addEventListener("click", () => {
+        input.focus();
+        window.scrollTo({
+          top: document.body.scrollHeight,
+          behavior: "smooth"
+        });
+      });
+
+      function updateClock() {
+        clock.textContent = new Date().toLocaleTimeString();
+      }
+
+      updateClock();
+      setInterval(updateClock, 1000);
+    })();
+  </script>
+</body>
+</html>
