@@ -9,8 +9,13 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: android-build-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   android:
+    name: Build Android APK
     runs-on: ubuntu-latest
 
     steps:
@@ -23,7 +28,7 @@ jobs:
           node-version: 22
           cache: npm
 
-      - name: Install dependencies
+      - name: Install Node dependencies
         run: npm ci
 
       - name: Setup Java
@@ -36,13 +41,26 @@ jobs:
       - name: Sync Capacitor
         run: npx cap sync android
 
-      - name: Build APK
-        working-directory: android
-        run: ./gradlew assembleDebug
+      - name: Make Gradle executable
+        run: chmod +x android/gradlew
 
-      - name: Upload APK
+      - name: Verify Android project
+        working-directory: android
+        run: ./gradlew --version
+
+      - name: Build Debug APK
+        working-directory: android
+        run: ./gradlew assembleDebug --stacktrace
+
+      - name: Locate APK
+        run: |
+          echo "Generated APKs:"
+          find android/app/build/outputs/apk -type f -name "*.apk" -print
+
+      - name: Upload Debug APK
         uses: actions/upload-artifact@v4
         with:
-          name: ELP-Terminal-debug-apk
+          name: ELP-Terminal-${{ github.sha }}-debug
           path: android/app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
+          retention-days: 14
