@@ -1,87 +1,62 @@
-name: Android Release APK
+name: Android Release
 
 on:
   push:
-    tags: [ 'v*' ]
+    tags:
+      - "v*"
   workflow_dispatch:
-    inputs:
-      version:
-        description: 'Version tag (e.g. v1.0.0)'
-        required: true
-        default: 'v1.0.0'
 
 permissions:
   contents: write
-  packages: write
 
 jobs:
-  build:
-    name: Build & Sign Release APKs
+  build-release:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with: { fetch-depth: 0 }
 
-      - name: Set up JDK 17
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install npm dependencies
+        run: npm install
+
+      - name: Setup Java
         uses: actions/setup-java@v4
-        with: { distribution: 'temurin', java-version: '17', cache: 'gradle' }
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
 
-      - name: Set up Android SDK
+      - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Install NDK 26
-        run: sdkmanager --install "ndk;26.1.10909125" "cmake;3.22.1"
-
-      - name: Cache Gradle
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: gradle-${{ hashFiles('**/*.gradle*','**/gradle-wrapper.properties') }}
-
-      - name: Decode keystore
-        env:
-          KEYSTORE_B64: ${{ secrets.KEYSTORE_BASE64 }}
+      - name: Build release APK
+        working-directory: android
         run: |
-          echo "$KEYSTORE_B64" | base64 --decode > release.keystore
-          cat > keystore.properties <<EOF
-          storeFile=../release.keystore
-          storePassword=${{ secrets.KEYSTORE_PASSWORD }}
-          keyAlias=${{ secrets.KEY_ALIAS }}
-          keyPassword=${{ secrets.KEY_PASSWORD }}
-          EOF
+          chmod +x gradlew
+          ./gradlew assembleRelease
 
-      - name: Grant gradlew
-        run: chmod +x ./gradlew
-
-      - name: Build release
-        run: ./gradlew --no-daemon assembleRelease bundleRelease
-
-      - name: Rename artifacts
+      - name: Find APK
+        id: apk
         run: |
-          mkdir -p out
-          find app/build/outputs/apk/release  -name "*.apk" -exec cp {} out/ \;
-          find app/build/outputs/bundle/release -name "*.aab" -exec cp {} out/ \;
-          cd out && for f in *.apk *.aab; do
-            [ -e "$f" ] || continue
-            sha256sum "$f" > "$f.sha256"
-          done
+          APK=$(find android/app/build/outputs/apk -type f -name "*.apk" | head -n 1)
+          echo "path=$APK" >> "$GITHUB_OUTPUT"
 
-      - name: Upload build artifacts
+      - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: elp-terminal-${{ github.ref_name }}
-          path: out/*
+          name: android-release
+          path: ${{ steps.apk.outputs.path }}
 
       - name: Create GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          name: El Paradiso Terminal ${{ github.ref_name }}
-          body_path: fastlane/metadata/android/en-US/changelogs/default.txt
-          files: |
-            out/*.apk
-            out/*.aab
-            out/*.sha256
+          files: ${{ steps.apk.outputs.path }}
+          generate_release_notes: true
