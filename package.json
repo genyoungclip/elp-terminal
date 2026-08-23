@@ -14,9 +14,9 @@
   "license": "MIT",
   "author": "genyoungclip",
   "type": "commonjs",
-  "main": "index.js",
+  "main": "index.html",
   "directories": {
-    "doc": "docs"
+    "root": "/storage/6FDA-CB21/home/elp-terminal"
   },
   "scripts": {
     "clean": "./gradlew clean",
