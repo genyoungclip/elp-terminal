@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: android-build-${{ github.ref }}
@@ -50,7 +50,7 @@ jobs:
 
       - name: Build Debug APK
         working-directory: android
-        run: ./gradlew assembleDebug --stacktrace
+        run: ./gradlew assembleRelease
 
       - name: Locate APK
         run: |
@@ -60,7 +60,7 @@ jobs:
       - name: Upload Debug APK
         uses: actions/upload-artifact@v6
         with:
-          name: ELP-Terminal-${{ github.sha }}-debug
-          path: android/app/build/outputs/apk/debug/*.apk
+          name: ELP-Terminal-${{ github.sha }}-release
+          path: android/app/build/outputs/apk/release/*.apk
           if-no-files-found: error
           retention-days: 14
