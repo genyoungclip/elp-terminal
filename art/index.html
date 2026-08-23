@@ -1,683 +1,378 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="theme-color" content="#050807">
-  <meta name="color-scheme" content="dark">
-  <meta name="description" content="ELP Terminal — a fast, secure developer terminal interface.">
-  <meta name="application-name" content="ELP Terminal">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Console | elp.elparadisogonzalo.net</title>
+    
+    <!-- Xterm.js Core & Addons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css" />
+    
+    <!-- Typography & Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
 
-  <link rel="icon" href="/favicon.png">
-  <link rel="apple-touch-icon" href="/icon-192.png">
+    <style>
+        :root {
+            --bg-base: #0f111a;
+            --bg-surface: #1a1c29;
+            --bg-panel: #24273a;
+            --text-main: #e2e8f0;
+            --text-muted: #94a3b8;
+            --accent: #3b82f6;
+            --accent-hover: #60a5fa;
+            --border: #334155;
+            --success: #10b981;
+            --error: #ef4444;
+            --warning: #f59e0b;
+        }
 
-  <title>ELP Terminal</title>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
 
-  <style>
-    :root {
-      --bg: #050807;
-      --panel: rgba(10, 18, 15, .82);
-      --panel-2: rgba(15, 25, 21, .92);
-      --line: rgba(71, 255, 157, .16);
-      --line-strong: rgba(71, 255, 157, .34);
-      --text: #ecfff4;
-      --muted: #759286;
-      --green: #47ff9d;
-      --green-2: #00d977;
-      --cyan: #48e9ff;
-      --danger: #ff5577;
-      --shadow: 0 24px 80px rgba(0,0,0,.45);
-      --radius: 18px;
-      font-family:
-        Inter, ui-sans-serif, system-ui, -apple-system,
-        BlinkMacSystemFont, "Segoe UI", sans-serif;
-    }
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            background-color: var(--bg-base);
+            color: var(--text-main);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
 
-    * {
-      box-sizing: border-box;
-    }
+        /* Top Navigation */
+        .navbar {
+            height: 48px;
+            background-color: var(--bg-surface);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 1.25rem;
+            user-select: none;
+        }
 
-    html,
-    body {
-      margin: 0;
-      min-height: 100%;
-      background: var(--bg);
-      color: var(--text);
-    }
+        .nav-brand {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-weight: 600;
+            font-size: 0.9rem;
+            letter-spacing: 0.5px;
+        }
 
-    body {
-      overflow-x: hidden;
-    }
+        .status-badge {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: rgba(245, 158, 11, 0.1);
+            color: var(--warning);
+            padding: 0.35rem 0.85rem;
+            border-radius: 99px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
 
-    button,
-    input {
-      font: inherit;
-    }
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background-color: var(--warning);
+            border-radius: 50%;
+            box-shadow: 0 0 8px var(--warning);
+            transition: all 0.3s ease;
+        }
 
-    button {
-      cursor: pointer;
-    }
+        /* Status States */
+        .status-badge.connected { background: rgba(16, 185, 129, 0.1); color: var(--success); }
+        .status-badge.connected .status-dot { background-color: var(--success); box-shadow: 0 0 8px var(--success); }
+        .status-badge.disconnected { background: rgba(239, 68, 68, 0.1); color: var(--error); }
+        .status-badge.disconnected .status-dot { background-color: var(--error); box-shadow: 0 0 8px var(--error); }
 
-    .background {
-      position: fixed;
-      inset: 0;
-      pointer-events: none;
-      overflow: hidden;
-      z-index: 0;
-      background:
-        radial-gradient(circle at 20% 10%, rgba(71,255,157,.09), transparent 32%),
-        radial-gradient(circle at 85% 80%, rgba(72,233,255,.07), transparent 30%),
-        linear-gradient(rgba(71,255,157,.025) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(71,255,157,.025) 1px, transparent 1px);
-      background-size: auto, auto, 44px 44px, 44px 44px;
-    }
+        /* Main Workspace */
+        .workspace {
+            display: flex;
+            flex: 1;
+            height: calc(100vh - 48px);
+        }
 
-    .orb {
-      position: absolute;
-      width: 360px;
-      height: 360px;
-      border-radius: 50%;
-      filter: blur(80px);
-      opacity: .15;
-      background: var(--green);
-    }
+        /* Sidebar - File Explorer */
+        .sidebar {
+            width: 280px;
+            background-color: var(--bg-panel);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+        }
 
-    .orb.one {
-      top: -180px;
-      left: -100px;
-    }
+        .sidebar-header {
+            padding: 0.75rem 1rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
 
-    .orb.two {
-      right: -180px;
-      bottom: -180px;
-      background: var(--cyan);
-    }
+        .file-tree {
+            padding: 0.75rem 0.5rem;
+            overflow-y: auto;
+            flex: 1;
+            font-family: 'Fira Code', monospace;
+        }
 
-    .app {
-      position: relative;
-      z-index: 1;
-      width: min(1180px, calc(100% - 28px));
-      margin: 0 auto;
-      padding: 24px 0 48px;
-    }
+        .file-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.4rem 0.5rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            color: var(--text-main);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
 
-    header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 20px;
-      margin-bottom: 24px;
-    }
+        .file-item:hover { background-color: rgba(255, 255, 255, 0.05); }
 
-    .brand {
-      display: flex;
-      align-items: center;
-      gap: 13px;
-    }
+        /* Terminal Container */
+        .terminal-wrapper {
+            flex: 1;
+            padding: 1rem;
+            background-color: var(--bg-base);
+            overflow: hidden;
+        }
 
-    .logo {
-      width: 46px;
-      height: 46px;
-      display: grid;
-      place-items: center;
-      border: 1px solid var(--line-strong);
-      border-radius: 13px;
-      background: rgba(71,255,157,.07);
-      box-shadow:
-        0 0 28px rgba(71,255,157,.12),
-        inset 0 0 20px rgba(71,255,157,.04);
-      color: var(--green);
-      font-weight: 900;
-      letter-spacing: -2px;
-    }
+        #terminal-container { width: 100%; height: 100%; }
+        .xterm .xterm-viewport { background-color: transparent !important; }
 
-    .brand h1 {
-      margin: 0;
-      font-size: 16px;
-      letter-spacing: .12em;
-    }
-
-    .brand span {
-      display: block;
-      margin-top: 3px;
-      color: var(--muted);
-      font: 11px ui-monospace, SFMono-Regular, Menlo, monospace;
-      letter-spacing: .08em;
-    }
-
-    .status {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      color: var(--muted);
-      font: 11px ui-monospace, monospace;
-    }
-
-    .dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: var(--green);
-      box-shadow: 0 0 14px var(--green);
-    }
-
-    .hero {
-      display: grid;
-      grid-template-columns: 1.3fr .7fr;
-      gap: 18px;
-      margin-bottom: 18px;
-    }
-
-    .panel {
-      border: 1px solid var(--line);
-      border-radius: var(--radius);
-      background: var(--panel);
-      box-shadow: var(--shadow);
-      backdrop-filter: blur(18px);
-    }
-
-    .hero-main {
-      min-height: 340px;
-      padding: clamp(28px, 6vw, 64px);
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      overflow: hidden;
-      position: relative;
-    }
-
-    .hero-main::after {
-      content: "";
-      position: absolute;
-      width: 240px;
-      height: 240px;
-      right: -90px;
-      top: -90px;
-      border-radius: 50%;
-      border: 1px solid var(--line);
-      box-shadow:
-        0 0 0 28px rgba(71,255,157,.02),
-        0 0 0 56px rgba(71,255,157,.015);
-    }
-
-    .eyebrow {
-      margin-bottom: 16px;
-      color: var(--green);
-      font: 11px ui-monospace, SFMono-Regular, Menlo, monospace;
-      letter-spacing: .2em;
-      text-transform: uppercase;
-    }
-
-    .hero h2 {
-      max-width: 720px;
-      margin: 0;
-      font-size: clamp(38px, 7vw, 76px);
-      line-height: .95;
-      letter-spacing: -.055em;
-    }
-
-    .hero h2 strong {
-      color: var(--green);
-      font-weight: 800;
-    }
-
-    .hero p {
-      max-width: 650px;
-      margin: 22px 0 0;
-      color: var(--muted);
-      font-size: 15px;
-      line-height: 1.7;
-    }
-
-    .hero-side {
-      padding: 22px;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-    }
-
-    .terminal-mini {
-      min-height: 180px;
-      padding: 18px;
-      border: 1px solid var(--line);
-      border-radius: 14px;
-      background: #030504;
-      font: 12px/1.8 ui-monospace, SFMono-Regular, Menlo, monospace;
-      color: #a5c7b5;
-    }
-
-    .terminal-mini .prompt {
-      color: var(--green);
-    }
-
-    .cursor {
-      display: inline-block;
-      width: 7px;
-      height: 14px;
-      margin-left: 3px;
-      vertical-align: -2px;
-      background: var(--green);
-      animation: blink 1s steps(1) infinite;
-    }
-
-    @keyframes blink {
-      50% { opacity: 0; }
-    }
-
-    .launch {
-      width: 100%;
-      border: 1px solid rgba(71,255,157,.35);
-      border-radius: 12px;
-      padding: 13px 16px;
-      background: var(--green);
-      color: #031109;
-      font-weight: 800;
-      letter-spacing: .04em;
-      transition: transform .2s, box-shadow .2s;
-    }
-
-    .launch:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 12px 35px rgba(71,255,157,.18);
-    }
-
-    .terminal {
-      overflow: hidden;
-      margin-top: 18px;
-    }
-
-    .terminal-bar {
-      min-height: 48px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0 15px;
-      border-bottom: 1px solid var(--line);
-      background: rgba(255,255,255,.015);
-    }
-
-    .terminal-title {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      color: var(--muted);
-      font: 11px ui-monospace, monospace;
-    }
-
-    .lights {
-      display: flex;
-      gap: 6px;
-    }
-
-    .light {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: #52615a;
-    }
-
-    .terminal-body {
-      min-height: 330px;
-      padding: 20px;
-      background:
-        linear-gradient(rgba(71,255,157,.015) 1px, transparent 1px);
-      background-size: 100% 24px;
-      font: 13px/1.8 ui-monospace, SFMono-Regular, Menlo, monospace;
-    }
-
-    .line {
-      white-space: pre-wrap;
-      word-break: break-word;
-    }
-
-    .prompt {
-      color: var(--green);
-    }
-
-    .muted {
-      color: var(--muted);
-    }
-
-    .command-row {
-      display: flex;
-      align-items: center;
-      gap: 9px;
-      margin-top: 8px;
-    }
-
-    #command {
-      flex: 1;
-      min-width: 0;
-      border: 0;
-      outline: 0;
-      background: transparent;
-      color: var(--text);
-      font: inherit;
-    }
-
-    .metrics {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 12px;
-      margin-top: 18px;
-    }
-
-    .metric {
-      padding: 20px;
-    }
-
-    .metric-label {
-      color: var(--muted);
-      font: 10px ui-monospace, monospace;
-      letter-spacing: .15em;
-    }
-
-    .metric-value {
-      margin-top: 9px;
-      color: var(--green);
-      font: 700 22px ui-monospace, monospace;
-    }
-
-    footer {
-      display: flex;
-      justify-content: space-between;
-      gap: 20px;
-      margin-top: 20px;
-      color: var(--muted);
-      font: 10px ui-monospace, monospace;
-    }
-
-    @media (max-width: 800px) {
-      .hero {
-        grid-template-columns: 1fr;
-      }
-
-      .hero-side {
-        gap: 18px;
-      }
-
-      .metrics {
-        grid-template-columns: repeat(2, 1fr);
-      }
-    }
-
-    @media (max-width: 480px) {
-      .app {
-        width: min(100% - 18px, 1180px);
-        padding-top: 12px;
-      }
-
-      header {
-        margin-bottom: 12px;
-      }
-
-      .status {
-        display: none;
-      }
-
-      .hero-main {
-        min-height: 300px;
-        padding: 28px 22px;
-      }
-
-      .hero h2 {
-        font-size: 43px;
-      }
-
-      .metrics {
-        grid-template-columns: 1fr 1fr;
-      }
-
-      .metric {
-        padding: 16px;
-      }
-    }
-  </style>
+        /* Button */
+        .mount-btn {
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 0.6rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            width: 100%;
+            font-size: 0.85rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            transition: background 0.2s;
+        }
+        .mount-btn:hover { background: var(--accent-hover); }
+    </style>
 </head>
-
 <body>
-  <div class="background">
-    <div class="orb one"></div>
-    <div class="orb two"></div>
-  </div>
 
-  <main class="app">
-    <header>
-      <div class="brand">
-        <div class="logo">&gt;_</div>
-        <div>
-          <h1>ELP TERMINAL</h1>
-          <span>DEVELOPER COMMAND INTERFACE</span>
+    <nav class="navbar">
+        <div class="nav-brand">
+            <i data-lucide="terminal" style="width: 18px; height: 18px; color: var(--accent);"></i>
+            <span>elp.elparadisogonzalo.net</span>
         </div>
-      </div>
-
-      <div class="status">
-        <span class="dot"></span>
-        SYSTEM ONLINE
-      </div>
-    </header>
-
-    <section class="hero">
-      <div class="panel hero-main">
-        <div class="eyebrow">ELPARADISOGONZALO // TERMINAL</div>
-        <h2>
-          Build.<br>
-          Ship.<br>
-          <strong>Execute.</strong>
-        </h2>
-        <p>
-          A fast command interface for the ELP ecosystem,
-          designed for developers and built to move between
-          web, Android and cloud infrastructure.
-        </p>
-      </div>
-
-      <div class="panel hero-side">
-        <div class="terminal-mini">
-          <div><span class="prompt">$</span> elp status</div>
-          <div>core ............. <span class="prompt">ONLINE</span></div>
-          <div>runtime .......... <span class="prompt">READY</span></div>
-          <div>cloud ............ <span class="prompt">CONNECTED</span></div>
-          <div>terminal ......... <span class="prompt">ACTIVE</span></div>
-          <br>
-          <div><span class="prompt">$</span> _<span class="cursor"></span></div>
+        <div class="status-badge" id="conn-status">
+            <div class="status-dot"></div>
+            <span id="conn-text">Connecting...</span>
         </div>
+    </nav>
 
-        <button class="launch" id="launch">
-          OPEN TERMINAL
-        </button>
-      </div>
-    </section>
+    <div class="workspace">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <span>Online Files</span>
+                <i data-lucide="cloud" style="width: 14px; height: 14px;"></i>
+            </div>
+            <div class="file-tree" id="online-file-tree">
+                <div class="file-item" style="color: var(--text-muted); font-style: italic;">
+                    Awaiting server sync...
+                </div>
+            </div>
+            
+            <div class="sidebar-header" style="border-top: 1px solid var(--border);">
+                <span>Local Workspace</span>
+            </div>
+            <div class="file-tree" id="local-file-tree" style="flex: 0.5; border-bottom: 1px solid var(--border);">
+                <div class="file-item" style="color: var(--text-muted); font-style: italic;">
+                    No local directory mounted.
+                </div>
+            </div>
+            <div style="padding: 1rem;">
+                <input type="file" id="local-file-input" style="display: none;" multiple webkitdirectory>
+                <button class="mount-btn" onclick="document.getElementById('local-file-input').click()">
+                    <i data-lucide="folder-plus" style="width: 16px; height: 16px;"></i> Mount Local Folder
+                </button>
+            </div>
+        </aside>
 
-    <section class="panel terminal" aria-label="ELP Terminal">
-      <div class="terminal-bar">
-        <div class="lights">
-          <span class="light"></span>
-          <span class="light"></span>
-          <span class="light"></span>
-        </div>
+        <main class="terminal-wrapper">
+            <div id="terminal-container"></div>
+        </main>
+    </div>
 
-        <div class="terminal-title">
-          ELP://LOCAL
-        </div>
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xterm-addon-web-links@0.9.0/lib/xterm-addon-web-links.js"></script>
 
-        <div class="terminal-title" id="clock">
-          --:--:--
-        </div>
-      </div>
+    <script>
+        lucide.createIcons();
 
-      <div class="terminal-body" id="output">
-        <div class="line">
-          <span class="prompt">ELP</span> Terminal initialized.
-        </div>
-
-        <div class="line muted">
-          Type "help" to see available commands.
-        </div>
-
-        <div class="command-row">
-          <span class="prompt">elp@terminal:~$</span>
-          <input
-            id="command"
-            type="text"
-            autocomplete="off"
-            autocapitalize="off"
-            spellcheck="false"
-            aria-label="Terminal command"
-            autofocus
-          >
-        </div>
-      </div>
-    </section>
-
-    <section class="metrics">
-      <div class="panel metric">
-        <div class="metric-label">RUNTIME</div>
-        <div class="metric-value" id="runtime">WEB</div>
-      </div>
-
-      <div class="panel metric">
-        <div class="metric-label">PLATFORM</div>
-        <div class="metric-value" id="platform">--</div>
-      </div>
-
-      <div class="panel metric">
-        <div class="metric-label">STATUS</div>
-        <div class="metric-value">READY</div>
-      </div>
-
-      <div class="panel metric">
-        <div class="metric-label">VERSION</div>
-        <div class="metric-value">1.0.0</div>
-      </div>
-    </section>
-
-    <footer>
-      <span>ELPARADISOGONZALO</span>
-      <span>ELP TERMINAL // 2026</span>
-    </footer>
-  </main>
-
-  <script>
-    (() => {
-      const output = document.getElementById("output");
-      const input = document.getElementById("command");
-      const launch = document.getElementById("launch");
-      const clock = document.getElementById("clock");
-      const platform = document.getElementById("platform");
-
-      platform.textContent =
-        navigator.userAgentData?.platform ||
-        navigator.platform ||
-        "WEB";
-
-      function addLine(text, className = "") {
-        const line = document.createElement("div");
-        line.className = `line ${className}`;
-        line.textContent = text;
-
-        const commandRow = output.querySelector(".command-row");
-        output.insertBefore(line, commandRow);
-      }
-
-      function prompt() {
-        const row = document.createElement("div");
-        row.className = "command-row";
-
-        row.innerHTML = `
-          <span class="prompt">elp@terminal:~$</span>
-          <input
-            type="text"
-            autocomplete="off"
-            autocapitalize="off"
-            spellcheck="false"
-            aria-label="Terminal command"
-          >
-        `;
-
-        output.appendChild(row);
-
-        const next = row.querySelector("input");
-        next.addEventListener("keydown", handleCommand);
-        next.focus();
-
-        output.scrollTop = output.scrollHeight;
-      }
-
-      function handleCommand(event) {
-        if (event.key !== "Enter") return;
-
-        const value = event.target.value.trim();
-
-        if (!value) {
-          prompt();
-          event.target.disabled = true;
-          return;
-        }
-
-        event.target.disabled = true;
-
-        addLine(`elp@terminal:~$ ${value}`, "prompt");
-
-        const [command] = value.split(/\s+/);
-
-        switch (command.toLowerCase()) {
-          case "help":
-            addLine("Available commands:");
-            addLine("  help       Show this help");
-            addLine("  clear      Clear terminal");
-            addLine("  status     Show system status");
-            addLine("  version    Show terminal version");
-            addLine("  date       Show current date");
-            break;
-
-          case "clear":
-            output.innerHTML = "";
-            prompt();
-            return;
-
-          case "status":
-            addLine("ELP Terminal ........ ONLINE");
-            addLine("Web runtime ......... READY");
-            addLine("Command bridge ...... STANDBY");
-            addLine("Cloud interface ..... READY");
-            break;
-
-          case "version":
-            addLine("ELP Terminal v1.0.0");
-            break;
-
-          case "date":
-            addLine(new Date().toString());
-            break;
-
-          default:
-            addLine(
-              `Command "${command}" is not available in the web sandbox.`,
-              "muted"
-            );
-        }
-
-        prompt();
-      }
-
-      input.addEventListener("keydown", handleCommand);
-
-      launch.addEventListener("click", () => {
-        input.focus();
-        window.scrollTo({
-          top: document.body.scrollHeight,
-          behavior: "smooth"
+        // 1. Initialize Terminal
+        const term = new Terminal({
+            fontFamily: '"Fira Code", monospace',
+            fontSize: 14,
+            cursorBlink: true,
+            theme: {
+                background: '#0f111a',
+                foreground: '#e2e8f0',
+                cursor: '#3b82f6',
+                selectionBackground: 'rgba(59, 130, 246, 0.3)'
+            }
         });
-      });
 
-      function updateClock() {
-        clock.textContent = new Date().toLocaleTimeString();
-      }
+        const fitAddon = new FitAddon.FitAddon();
+        term.loadAddon(fitAddon);
+        term.loadAddon(new WebLinksAddon.WebLinksAddon());
+        
+        term.open(document.getElementById('terminal-container'));
+        fitAddon.fit();
+        window.addEventListener('resize', () => fitAddon.fit());
 
-      updateClock();
-      setInterval(updateClock, 1000);
-    })();
-  </script>
+        // 2. Production WebSocket Connection Logic
+        let socket;
+        let isConnected = true;
+        
+        // Update to match your actual backend WebSocket path
+        const WEBSOCKET_URL = 'wss://elp.elparadisogonzalo.net/shell'; 
+
+        const statusBadge = document.getElementById('conn-status');
+        const statusText = document.getElementById('conn-text');
+
+        function updateStatus(state, message) {
+            statusBadge.className = `status-badge ${state}`;
+            statusText.textContent = message;
+        }
+
+        function connectTerminal() {
+            term.writeln('\x1b[36m[System]\x1b[0m Attempting secure connection to elp.elparadisogonzalo.net...');
+            
+            try {
+                socket = new WebSocket(WEBSOCKET_URL);
+
+                socket.onopen = () => {
+                    isConnected = true;
+                    updateStatus('connected', 'Securely Connected');
+                    term.writeln('\x1b[32m[System]\x1b[0m Connection established. Shell ready.');
+                    
+                    // Tell backend the terminal size
+                    socket.send(JSON.stringify({
+                        type: 'resize',
+                        cols: term.cols,
+                        rows: term.rows
+                    }));
+                };
+
+                // Route incoming server data to the terminal display
+                socket.onmessage = (event) => {
+                    term.write(event.data);
+                };
+
+                socket.onclose = () => {
+                    isConnected = false;
+                    updateStatus('disconnected', 'Connection Lost');
+                    term.writeln('\r\n\x1b[31m[System]\x1b[0m Connection closed by server. Retrying in 5s...');
+                    setTimeout(connectTerminal, 5000);
+                };
+
+                socket.onerror = (err) => {
+                    updateStatus('disconnected', 'Connection Error');
+                };
+
+            } catch (e) {
+                term.writeln('\x1b[31m[Error]\x1b[0m WebSocket not supported or invalid URL.');
+            }
+        }
+
+        // 3. Handle User Input
+        term.onData(data => {
+            if (isConnected && socket.readyState === WebSocket.OPEN) {
+                // Send keystrokes directly to the server
+                socket.send(data);
+            } else {
+                // Local fallback echo if server isn't running yet
+                if (data === '\r') {
+                    term.writeln('\r\n\x1b[33m[Warning]\x1b[0m Command ignored: WebSocket disconnected.');
+                    term.write('$ ');
+                } else if (data === '\u007F') {
+                    term.write('\b \b');
+                } else {
+                    term.write(data);
+                }
+            }
+        });
+
+        // Handle terminal resizes and tell the server
+        term.onResize(size => {
+            if (isConnected && socket.readyState === WebSocket.OPEN) {
+                socket.send(JSON.stringify({ type: 'resize', cols: size.cols, rows: size.rows }));
+            }
+        });
+
+        // 4. Local HTML5 File System Parsing
+        document.getElementById('local-file-input').addEventListener('change', (e) => {
+            const files = e.target.files;
+            const tree = document.getElementById('local-file-tree');
+            
+            if (files.length === 0) return;
+
+            tree.innerHTML = ''; // Clear previous
+            
+            // Limit display to 50 files to prevent UI freezing on massive node_modules folders
+            const displayLimit = Math.min(files.length, 50);
+            
+            for (let i = 0; i < displayLimit; i++) {
+                const file = files[i];
+                const pathParts = file.webkitRelativePath.split('/');
+                const fileName = pathParts[pathParts.length - 1];
+                
+                const div = document.createElement('div');
+                div.className = 'file-item';
+                div.title = file.webkitRelativePath; // Tooltip shows full path
+                
+                // Determine basic icon based on extension
+                let icon = 'file';
+                let color = '#94a3b8';
+                if (fileName.endsWith('.js') || fileName.endsWith('.ts')) { icon = 'file-code'; color = '#f59e0b'; }
+                else if (fileName.endsWith('.html') || fileName.endsWith('.css')) { icon = 'file-code'; color = '#3b82f6'; }
+                else if (fileName.endsWith('.json')) { icon = 'file-json'; color = '#10b981'; }
+
+                div.innerHTML = `<i data-lucide="${icon}" style="width: 14px; height: 14px; color: ${color};"></i> ${fileName}`;
+                tree.appendChild(div);
+            }
+
+            if (files.length > 50) {
+                const overflow = document.createElement('div');
+                overflow.className = 'file-item';
+                overflow.style.color = 'var(--text-muted)';
+                overflow.textContent = `+ ${files.length - 50} more files...`;
+                tree.appendChild(overflow);
+            }
+
+            lucide.createIcons();
+            term.writeln(`\r\n\x1b[36m[Workspace]\x1b[0m Mounted local directory containing ${files.length} files.`);
+            if (!isConnected) term.write('\r\n$ ');
+        });
+
+        // Start connection
+        connectTerminal();
+    </script>
 </body>
 </html>

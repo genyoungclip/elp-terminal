@@ -1,101 +1,378 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>El Paradiso Terminal — Android terminal & shell for developers</title>
-  <meta name="description" content="A full-featured Android terminal emulator with apt package manager, PowerShell, and every major programming language."/>
-  <meta property="og:title"       content="El Paradiso Terminal"/>
-  <meta property="og:description" content="Termux-compatible • PowerShell-ready • 1500+ packages."/>
-  <meta property="og:url"         content="https://elp.elparadisogonzalo.net"/>
-  <meta property="og:image"       content="https://elp.elparadisogonzalo.net/assets/hero.png"/>
-  <link rel="icon" href="/favicon.svg" type="image/svg+xml"/>
-  <link rel="stylesheet" href="/style.css"/>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Console | elp.elparadisogonzalo.net</title>
+    
+    <!-- Xterm.js Core & Addons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css" />
+    
+    <!-- Typography & Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        :root {
+            --bg-base: #0f111a;
+            --bg-surface: #1a1c29;
+            --bg-panel: #24273a;
+            --text-main: #e2e8f0;
+            --text-muted: #94a3b8;
+            --accent: #3b82f6;
+            --accent-hover: #60a5fa;
+            --border: #334155;
+            --success: #10b981;
+            --error: #ef4444;
+            --warning: #f59e0b;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            background-color: var(--bg-base);
+            color: var(--text-main);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Top Navigation */
+        .navbar {
+            height: 48px;
+            background-color: var(--bg-surface);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 1.25rem;
+            user-select: none;
+        }
+
+        .nav-brand {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-weight: 600;
+            font-size: 0.9rem;
+            letter-spacing: 0.5px;
+        }
+
+        .status-badge {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: rgba(245, 158, 11, 0.1);
+            color: var(--warning);
+            padding: 0.35rem 0.85rem;
+            border-radius: 99px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background-color: var(--warning);
+            border-radius: 50%;
+            box-shadow: 0 0 8px var(--warning);
+            transition: all 0.3s ease;
+        }
+
+        /* Status States */
+        .status-badge.connected { background: rgba(16, 185, 129, 0.1); color: var(--success); }
+        .status-badge.connected .status-dot { background-color: var(--success); box-shadow: 0 0 8px var(--success); }
+        .status-badge.disconnected { background: rgba(239, 68, 68, 0.1); color: var(--error); }
+        .status-badge.disconnected .status-dot { background-color: var(--error); box-shadow: 0 0 8px var(--error); }
+
+        /* Main Workspace */
+        .workspace {
+            display: flex;
+            flex: 1;
+            height: calc(100vh - 48px);
+        }
+
+        /* Sidebar - File Explorer */
+        .sidebar {
+            width: 280px;
+            background-color: var(--bg-panel);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar-header {
+            padding: 0.75rem 1rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .file-tree {
+            padding: 0.75rem 0.5rem;
+            overflow-y: auto;
+            flex: 1;
+            font-family: 'Fira Code', monospace;
+        }
+
+        .file-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.4rem 0.5rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            color: var(--text-main);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .file-item:hover { background-color: rgba(255, 255, 255, 0.05); }
+
+        /* Terminal Container */
+        .terminal-wrapper {
+            flex: 1;
+            padding: 1rem;
+            background-color: var(--bg-base);
+            overflow: hidden;
+        }
+
+        #terminal-container { width: 100%; height: 100%; }
+        .xterm .xterm-viewport { background-color: transparent !important; }
+
+        /* Button */
+        .mount-btn {
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 0.6rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            width: 100%;
+            font-size: 0.85rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            transition: background 0.2s;
+        }
+        .mount-btn:hover { background: var(--accent-hover); }
+    </style>
 </head>
 <body>
 
-<header class="nav">
-  <a href="/" class="brand">
-    <img src="/assets/logo.svg" alt="" width="34" height="34"/>
-    <span>El Paradiso <b>Terminal</b></span>
-  </a>
-  <nav>
-    <a href="#features">Features</a>
-    <a href="#install">Install</a>
-    <a href="#packages">Packages</a>
-    <a href="/docs/">Docs</a>
-    <a href="https://github.com/elparadisogonzalo/elp-terminal">GitHub</a>
-  </nav>
-</header>
+    <nav class="navbar">
+        <div class="nav-brand">
+            <i data-lucide="terminal" style="width: 18px; height: 18px; color: var(--accent);"></i>
+            <span>elp.elparadisogonzalo.net</span>
+        </div>
+        <div class="status-badge" id="conn-status">
+            <div class="status-dot"></div>
+            <span id="conn-text">Connecting...</span>
+        </div>
+    </nav>
 
-<section class="hero">
-  <div class="hero-inner">
-    <h1>Your Android is a <span class="grad">real Linux workstation</span>.</h1>
-    <p class="lead">
-      El Paradiso Terminal ships bash, zsh, fish and Microsoft PowerShell 7 in
-      one app — with an <code>apt</code> package manager that installs Python,
-      Node.js, Rust, Go, Java, PHP, Ruby, Clang and 1500+ more packages, all
-      served from this domain.
-    </p>
-    <div class="cta">
-      <a class="btn primary" href="/download/latest">⬇ Download APK</a>
-      <a class="btn"         href="https://github.com/elparadisogonzalo/elp-terminal">★ Star on GitHub</a>
+    <div class="workspace">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <span>Online Files</span>
+                <i data-lucide="cloud" style="width: 14px; height: 14px;"></i>
+            </div>
+            <div class="file-tree" id="online-file-tree">
+                <div class="file-item" style="color: var(--text-muted); font-style: italic;">
+                    Awaiting server sync...
+                </div>
+            </div>
+            
+            <div class="sidebar-header" style="border-top: 1px solid var(--border);">
+                <span>Local Workspace</span>
+            </div>
+            <div class="file-tree" id="local-file-tree" style="flex: 0.5; border-bottom: 1px solid var(--border);">
+                <div class="file-item" style="color: var(--text-muted); font-style: italic;">
+                    No local directory mounted.
+                </div>
+            </div>
+            <div style="padding: 1rem;">
+                <input type="file" id="local-file-input" style="display: none;" multiple webkitdirectory>
+                <button class="mount-btn" onclick="document.getElementById('local-file-input').click()">
+                    <i data-lucide="folder-plus" style="width: 16px; height: 16px;"></i> Mount Local Folder
+                </button>
+            </div>
+        </aside>
+
+        <main class="terminal-wrapper">
+            <div id="terminal-container"></div>
+        </main>
     </div>
-    <pre class="term"><span class="p">elp@android:~$</span> pkg install python nodejs rust powershell
-<span class="c">✓ Installed 4 packages, 128 MB</span>
-<span class="p">elp@android:~$</span> pwsh
-<span class="c">PowerShell 7.4.4 on Linux</span>
-PS /data/data/net.elparadisogonzalo.terminal/files/home> _</pre>
-  </div>
-</section>
 
-<section id="features" class="features">
-  <h2>Everything a terminal should be</h2>
-  <div class="grid">
-    <div class="card"><h3>🖥️ Full VT100</h3><p>256-color xterm compatible, true-color, mouse & touch, Unicode.</p></div>
-    <div class="card"><h3>📦 apt package manager</h3><p>1500+ packages built for arm64, armv7, x86_64 & i686.</p></div>
-    <div class="card"><h3>🐚 Multi-shell</h3><p>bash, zsh, fish and Microsoft PowerShell 7 out of the box.</p></div>
-    <div class="card"><h3>🐍 Every language</h3><p>Python, Node.js, Ruby, Go, Rust, Java 21, PHP, Perl, Lua, R, Julia.</p></div>
-    <div class="card"><h3>🔐 Signed builds</h3><p>Reproducible APKs signed via GitHub Actions, checksummed on release.</p></div>
-    <div class="card"><h3>❤️ Open source</h3><p>GPL-3.0. Fork it, mirror it, ship your own distro.</p></div>
-  </div>
-</section>
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xterm-addon-web-links@0.9.0/lib/xterm-addon-web-links.js"></script>
 
-<section id="install" class="install">
-  <h2>Install in 30 seconds</h2>
-  <div class="steps">
-    <div><span>1</span><p>Download the APK for your device architecture.</p>
-      <div class="dl">
-        <a class="btn" href="/download/arm64-v8a">arm64-v8a</a>
-        <a class="btn" href="/download/armeabi-v7a">armeabi-v7a</a>
-        <a class="btn" href="/download/x86_64">x86_64</a>
-        <a class="btn" href="/download/universal">Universal</a>
-      </div>
-    </div>
-    <div><span>2</span><p>Allow install from unknown sources, then open the file.</p></div>
-    <div><span>3</span><p>Launch <b>El Paradiso Terminal</b>. Bootstrap downloads automatically from this domain.</p></div>
-    <div><span>4</span><p>Run <code>pkg install &lt;whatever&gt;</code>. Done.</p></div>
-  </div>
-</section>
+    <script>
+        lucide.createIcons();
 
-<section id="packages" class="packages">
-  <h2>1500+ packages</h2>
-  <p class="lead">Pulled from <code>https://elp.elparadisogonzalo.net/apt/</code> — signed with GPG key <code>0xELP…</code>.</p>
-  <ul class="pkg-grid">
-    <li>python</li><li>nodejs</li><li>ruby</li><li>golang</li><li>rust</li>
-    <li>openjdk-21</li><li>php</li><li>perl</li><li>lua</li><li>julia</li>
-    <li>r-base</li><li>clang</li><li>powershell</li><li>zsh</li><li>fish</li>
-    <li>git</li><li>vim</li><li>neovim</li><li>tmux</li><li>ffmpeg</li>
-    <li>imagemagick</li><li>sqlite</li><li>postgresql</li><li>nginx</li>
-    <li>curl</li><li>wget</li><li>openssh</li><li>docker</li><li>kubectl</li>
-    <li>ansible</li><li>terraform</li><li>gh</li>
-  </ul>
-</section>
+        // 1. Initialize Terminal
+        const term = new Terminal({
+            fontFamily: '"Fira Code", monospace',
+            fontSize: 14,
+            cursorBlink: true,
+            theme: {
+                background: '#0f111a',
+                foreground: '#e2e8f0',
+                cursor: '#3b82f6',
+                selectionBackground: 'rgba(59, 130, 246, 0.3)'
+            }
+        });
 
-<footer>
-  <p>© 2026 El Paradiso Gonzalo — GPL-3.0 — <a href="mailto:contact@elparadisogonzalo.net">contact@elparadisogonzalo.net</a></p>
-  <p><a href="/privacy.html">Privacy</a> · <a href="/terms.html">Terms</a> · <a href="/apt/">APT repo</a> · <a href="/bootstrap/">Bootstrap</a></p>
-</footer>
+        const fitAddon = new FitAddon.FitAddon();
+        term.loadAddon(fitAddon);
+        term.loadAddon(new WebLinksAddon.WebLinksAddon());
+        
+        term.open(document.getElementById('terminal-container'));
+        fitAddon.fit();
+        window.addEventListener('resize', () => fitAddon.fit());
 
+        // 2. Production WebSocket Connection Logic
+        let socket;
+        let isConnected = true;
+        
+        // Update to match your actual backend WebSocket path
+        const WEBSOCKET_URL = 'wss://elp.elparadisogonzalo.net/shell'; 
+
+        const statusBadge = document.getElementById('conn-status');
+        const statusText = document.getElementById('conn-text');
+
+        function updateStatus(state, message) {
+            statusBadge.className = `status-badge ${state}`;
+            statusText.textContent = message;
+        }
+
+        function connectTerminal() {
+            term.writeln('\x1b[36m[System]\x1b[0m Attempting secure connection to elp.elparadisogonzalo.net...');
+            
+            try {
+                socket = new WebSocket(WEBSOCKET_URL);
+
+                socket.onopen = () => {
+                    isConnected = true;
+                    updateStatus('connected', 'Securely Connected');
+                    term.writeln('\x1b[32m[System]\x1b[0m Connection established. Shell ready.');
+                    
+                    // Tell backend the terminal size
+                    socket.send(JSON.stringify({
+                        type: 'resize',
+                        cols: term.cols,
+                        rows: term.rows
+                    }));
+                };
+
+                // Route incoming server data to the terminal display
+                socket.onmessage = (event) => {
+                    term.write(event.data);
+                };
+
+                socket.onclose = () => {
+                    isConnected = false;
+                    updateStatus('disconnected', 'Connection Lost');
+                    term.writeln('\r\n\x1b[31m[System]\x1b[0m Connection closed by server. Retrying in 5s...');
+                    setTimeout(connectTerminal, 5000);
+                };
+
+                socket.onerror = (err) => {
+                    updateStatus('disconnected', 'Connection Error');
+                };
+
+            } catch (e) {
+                term.writeln('\x1b[31m[Error]\x1b[0m WebSocket not supported or invalid URL.');
+            }
+        }
+
+        // 3. Handle User Input
+        term.onData(data => {
+            if (isConnected && socket.readyState === WebSocket.OPEN) {
+                // Send keystrokes directly to the server
+                socket.send(data);
+            } else {
+                // Local fallback echo if server isn't running yet
+                if (data === '\r') {
+                    term.writeln('\r\n\x1b[33m[Warning]\x1b[0m Command ignored: WebSocket disconnected.');
+                    term.write('$ ');
+                } else if (data === '\u007F') {
+                    term.write('\b \b');
+                } else {
+                    term.write(data);
+                }
+            }
+        });
+
+        // Handle terminal resizes and tell the server
+        term.onResize(size => {
+            if (isConnected && socket.readyState === WebSocket.OPEN) {
+                socket.send(JSON.stringify({ type: 'resize', cols: size.cols, rows: size.rows }));
+            }
+        });
+
+        // 4. Local HTML5 File System Parsing
+        document.getElementById('local-file-input').addEventListener('change', (e) => {
+            const files = e.target.files;
+            const tree = document.getElementById('local-file-tree');
+            
+            if (files.length === 0) return;
+
+            tree.innerHTML = ''; // Clear previous
+            
+            // Limit display to 50 files to prevent UI freezing on massive node_modules folders
+            const displayLimit = Math.min(files.length, 50);
+            
+            for (let i = 0; i < displayLimit; i++) {
+                const file = files[i];
+                const pathParts = file.webkitRelativePath.split('/');
+                const fileName = pathParts[pathParts.length - 1];
+                
+                const div = document.createElement('div');
+                div.className = 'file-item';
+                div.title = file.webkitRelativePath; // Tooltip shows full path
+                
+                // Determine basic icon based on extension
+                let icon = 'file';
+                let color = '#94a3b8';
+                if (fileName.endsWith('.js') || fileName.endsWith('.ts')) { icon = 'file-code'; color = '#f59e0b'; }
+                else if (fileName.endsWith('.html') || fileName.endsWith('.css')) { icon = 'file-code'; color = '#3b82f6'; }
+                else if (fileName.endsWith('.json')) { icon = 'file-json'; color = '#10b981'; }
+
+                div.innerHTML = `<i data-lucide="${icon}" style="width: 14px; height: 14px; color: ${color};"></i> ${fileName}`;
+                tree.appendChild(div);
+            }
+
+            if (files.length > 50) {
+                const overflow = document.createElement('div');
+                overflow.className = 'file-item';
+                overflow.style.color = 'var(--text-muted)';
+                overflow.textContent = `+ ${files.length - 50} more files...`;
+                tree.appendChild(overflow);
+            }
+
+            lucide.createIcons();
+            term.writeln(`\r\n\x1b[36m[Workspace]\x1b[0m Mounted local directory containing ${files.length} files.`);
+            if (!isConnected) term.write('\r\n$ ');
+        });
+
+        // Start connection
+        connectTerminal();
+    </script>
 </body>
 </html>
