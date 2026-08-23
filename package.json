@@ -13,8 +13,8 @@
   },
   "license": "MIT",
   "author": "genyoungclip",
-  "type": "commonjs",
-  "main": "index.html",
+  "type": "module",
+  "main": "index.js",
   "directories": {
     "root": "/storage/6FDA-CB21/home/elp-terminal"
   },
