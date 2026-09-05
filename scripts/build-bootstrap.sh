@@ -18,8 +18,39 @@ mkdir -p "$PREFIX"/{bin,lib,libexec,etc,share,tmp,var} out
 # ---- 1. Base userland (busybox + bash) ----------------------------------
 BB_URL="https://elp.elparadisogonzalo.net/upstream/busybox/busybox-${ARCH}"
 BASH_URL="https://elp.elparadisogonzalo.net/upstream/bash/bash-${ARCH}"
-curl -fsSL "$BB_URL"   -o "$PREFIX/bin/busybox" || echo "!! upstream busybox missing"
-curl -fsSL "$BASH_URL" -o "$PREFIX/bin/bash"    || echo "!! upstream bash missing"
+
+# Retry logic for downloading dependencies (up to 3 attempts)
+download_with_retry() {
+  local url="$1"
+  local output="$2"
+  local max_attempts=3
+  local attempt=1
+
+  while [ $attempt -le $max_attempts ]; do
+    if curl --retry 2 --retry-delay 5 -fsSL "$url" -o "$output"; then
+      echo "✓ Downloaded $(basename "$output")"
+      return 0
+    fi
+    echo "⚠ Download attempt $attempt failed for $(basename "$output")"
+    attempt=$((attempt + 1))
+    [ $attempt -le $max_attempts ] && sleep 10
+  done
+
+  echo "✗ Failed to download $(basename "$output") after $max_attempts attempts"
+  return 1
+}
+
+# Download dependencies, fail if either is missing
+if ! download_with_retry "$BB_URL" "$PREFIX/bin/busybox"; then
+  echo "!! ERROR: upstream busybox unavailable"
+  exit 1
+fi
+
+if ! download_with_retry "$BASH_URL" "$PREFIX/bin/bash"; then
+  echo "!! ERROR: upstream bash unavailable"
+  exit 1
+fi
+
 chmod +x "$PREFIX/bin/"*
 
 # Symlink busybox applets
