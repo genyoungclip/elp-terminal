@@ -47,5 +47,5 @@ jobs:
           git config user.name  "elp-bot"
           git config user.email "bot@elparadisogonzalo.net"
           git add website/public/bootstrap
-          git commit -m "chore(bootstrap): weekly refresh" || echo "nothing to commit"
+          git commit -m "chore(bootstrap): immediate refresh" || echo "nothing to commit"
           git push
