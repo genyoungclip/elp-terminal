@@ -1,0 +1,154 @@
+name: Android Release - Production
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  GRADLE_OPTS: -Xmx4g -XX:MaxMetaspaceSize=512m
+  JAVA_HOME: ${{ steps.setup-java.outputs.path }}
+
+jobs:
+  build-release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install npm dependencies
+        run: npm ci --prefer-offline --no-audit
+
+      - name: Setup Java
+        id: setup-java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: gradle
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Validate Gradle wrapper
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew --version
+
+      - name: Build release APK
+        working-directory: android
+        run: |
+          ./gradlew clean assembleRelease \
+            -Dorg.gradle.parallel=true \
+            -Dorg.gradle.daemon=true \
+            --build-cache \
+            --info
+        env:
+          RELEASE_STORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
+          RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
+          RELEASE_STORE_FILE: ${{ secrets.RELEASE_STORE_FILE }}
+
+      - name: Verify APK signature
+        working-directory: android
+        run: |
+          APK=$(find app/build/outputs/apk/release -type f -name "*.apk" | head -n 1)
+          if [ -z "$APK" ]; then
+            echo "ERROR: APK not found!"
+            exit 1
+          fi
+          echo "✓ Found APK: $APK"
+          jarsigner -verify -verbose -certs "$APK"
+          echo "✓ APK signature verified"
+
+      - name: Generate release notes
+        id: release-notes
+        run: |
+          echo "version=1.0.0" >> $GITHUB_OUTPUT
+          echo "date=$(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
+          echo "notes=Production build - ELP Terminal with love by azehagowa" >> $GITHUB_OUTPUT
+
+      - name: Find APK
+        id: apk
+        run: |
+          APK=$(find android/app/build/outputs/apk/release -type f -name "*.apk" | head -n 1)
+          if [ -z "$APK" ]; then
+            echo "ERROR: No APK found in outputs"
+            ls -la android/app/build/outputs/apk/release/ || true
+            exit 1
+          fi
+          echo "path=$APK" >> "$GITHUB_OUTPUT"
+          echo "filename=$(basename $APK)" >> "$GITHUB_OUTPUT"
+          echo "✓ APK ready: $APK"
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: elp-terminal-release
+          path: ${{ steps.apk.outputs.path }}
+          retention-days: 30
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ steps.apk.outputs.path }}
+          generate_release_notes: true
+          body: |
+            # ELP Terminal v${{ steps.release-notes.outputs.version }}
+            
+            **Release Date:** ${{ steps.release-notes.outputs.date }}
+            
+            📱 **APK:** `${{ steps.apk.outputs.filename }}`
+            
+            Made with ❤️ by azehagowa
+            
+            ## Installation
+            
+            1. Download the APK from the assets below
+            2. Enable "Unknown Sources" in Settings
+            3. Install the APK
+            4. Open ELP Terminal and run:
+               ```bash
+               pkg update && pkg upgrade
+               pkg install git python nodejs rust
+               ```
+            
+            ## Features
+            - 🖥️ Full Linux terminal emulator (VT100/xterm compatible)
+            - 📦 APT-style package manager
+            - 🐚 Multi-shell support (bash, zsh, fish, PowerShell 7)
+            - 🐍 Python 3.12, Node.js 20, Ruby 3.3, Go 1.22, Rust 1.79, Java 21, PHP 8.3
+            - 🎨 Material 3 UI with themes
+            - 🔐 Signed reproducible builds
+          draft: false
+          prerelease: false
+
+      - name: Build summary
+        if: always()
+        run: |
+          echo "=============================="
+          echo "ELP Terminal - Build Summary"
+          echo "=============================="
+          echo "Version: ${{ steps.release-notes.outputs.version }}"
+          echo "Date: ${{ steps.release-notes.outputs.date }}"
+          echo "APK: ${{ steps.apk.outputs.filename }}"
+          echo "Status: ${{ job.status }}"
+          echo "=============================="
+          echo "Made with ❤️ by azehagowa"
+          echo "=============================="
+          
